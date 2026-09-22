@@ -1,0 +1,75 @@
+import json
+
+from app.database import DB_GARANTIAS
+from app.agent import RetailAgent
+from app.tooling import (
+    comparar_productos,
+    consultar_garantia,
+    consultar_pedido,
+    registrar_solicitud_garantia,
+    validar_cobertura_garantia,
+)
+
+
+def test_catalog_and_comparison():
+    from app.tooling import consultar_catalogo
+
+    catalog = json.loads(consultar_catalogo("computadores", 5000000))
+    comparison = json.loads(comparar_productos(["LAP-DG-01", "LAP-OFF-02"]))
+
+    assert catalog["total"] == 2
+    assert comparison["status"] == "success"
+    assert len(comparison["productos"]) == 2
+
+
+def test_order_requires_identifier():
+    result = json.loads(consultar_pedido())
+
+    assert result["status"] == "needs_clarification"
+
+
+def test_warranty_coverage_and_ticket():
+    coverage = json.loads(validar_cobertura_garantia("10101010", "LAP-DG-01"))
+    ticket = json.loads(
+        registrar_solicitud_garantia("10101010", "LAP-DG-01", "No enciende")
+    )
+    status = json.loads(consultar_garantia("10101010", "LAP-DG-01"))
+
+    assert coverage["covered"] is True
+    assert ticket["status"] == "success"
+    assert status["tickets"]
+    DB_GARANTIAS.pop(ticket["ticket_id"], None)
+
+
+def test_unknown_product_is_not_registered():
+    result = json.loads(
+        registrar_solicitud_garantia("10101010", "UNKNOWN-SKU", "No enciende")
+    )
+
+    assert result["status"] == "escalated"
+    assert result["covered"] is False
+
+
+def test_agent_memory_keeps_customer_preference_and_order():
+    agent = RetailAgent()
+    agent._actualizar_memoria(
+        "validar_cliente_frecuente",
+        {},
+        '{"status":"success","identificacion":"10101010","nombre":"Liceth Guerrero","tipo_cliente":"frecuente"}',
+    )
+    agent._actualizar_memoria(
+        "consultar_catalogo",
+        {"presupuesto_max": 5000000, "uso_destinado": "diseño gráfico"},
+        '{"status":"success","productos":[{"name":"Laptop Pro Art 16"}]}',
+    )
+    agent._actualizar_memoria(
+        "consultar_pedido",
+        {},
+        '{"status":"success","pedidos":[{"order_id":"PED-1001"}]}',
+    )
+
+    assert agent.state.cliente_nombre == "Liceth Guerrero"
+    assert agent.state.tipo_cliente == "frecuente"
+    assert agent.state.presupuesto_mencionado == 5000000
+    assert agent.state.preferencias_usuario == ["diseño gráfico"]
+    assert agent.state.ultimo_pedido_consultado == "PED-1001"

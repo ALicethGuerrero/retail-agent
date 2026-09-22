@@ -1,0 +1,1 @@
+"""Agrupar los componentes del agente de retail."""
