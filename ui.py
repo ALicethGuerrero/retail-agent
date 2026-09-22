@@ -45,12 +45,14 @@ if user_prompt := st.chat_input("Escribe tu solicitud"):
     st.session_state.chat_history.append({"role": "user", "content": user_prompt})
     with st.chat_message("user"):
         st.write(user_prompt)
-    with st.chat_message("assistant"), st.spinner("Procesando"):
+    with st.chat_message("assistant"):
         try:
-            response_text = st.session_state.agent.chat(user_prompt)
-        except RuntimeError as error:
+            response_text = st.write_stream(
+                st.session_state.agent.chat_stream(user_prompt)
+            )
+        except Exception as error:
             response_text = str(error)
-        st.write(response_text)
+            st.write(response_text)
     st.session_state.chat_history.append(
         {"role": "assistant", "content": response_text}
     )

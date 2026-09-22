@@ -197,3 +197,64 @@ class RetailAgent:
         self.messages.append({"role": "assistant", "content": content})
         self.repository.save_message(self.session_id, "assistant", content)
         return content
+
+    def chat_stream(self, user_input: str):
+        """Enviar un mensaje resolviendo las tools y retornando un generador de tokens para streaming."""
+        api_client = get_client()
+        self.messages[0] = {"role": "system", "content": self._build_system_prompt()}
+        self.messages.append({"role": "user", "content": user_input})
+        self.repository.save_message(self.session_id, "user", user_input)
+        catalog_request = self._catalog_request(user_input)
+        tool_choice = (
+            {"type": "function", "function": {"name": "consultar_catalogo"}}
+            if catalog_request
+            else "auto"
+        )
+        response = api_client.chat.completions.create(
+            model=DEFAULT_MODEL,
+            messages=self.messages,
+            tools=TOOLS_SCHEMA,
+            tool_choice=tool_choice,
+        )
+        response_message = response.choices[0].message
+        while response_message.tool_calls:
+            self.messages.append(response_message.model_dump(exclude_none=True))
+            for tool_call in response_message.tool_calls:
+                function_name = tool_call.function.name
+                function_to_call = TOOL_MAPPING.get(function_name)
+                if function_to_call is None:
+                    raise ValueError(f"Tool no registrada: {function_name}")
+                arguments = json.loads(tool_call.function.arguments)
+                if function_name == "consultar_catalogo" and catalog_request:
+                    arguments = {
+                        key: value
+                        for key, value in catalog_request.items()
+                        if value is not None
+                    }
+                function_response = function_to_call(**arguments)
+                self._actualizar_memoria(function_name, arguments, function_response)
+                self.messages[0] = {"role": "system", "content": self._build_system_prompt()}
+                self.repository.save_message(self.session_id, "tool", function_response)
+                self.messages.append(
+                    {"tool_call_id": tool_call.id, "role": "tool", "name": function_name, "content": function_response}
+                )
+            response = api_client.chat.completions.create(
+                model=DEFAULT_MODEL, messages=self.messages, tools=TOOLS_SCHEMA
+            )
+            response_message = response.choices[0].message
+
+        stream_response = api_client.chat.completions.create(
+            model=DEFAULT_MODEL,
+            messages=self.messages,
+            stream=True,
+        )
+        full_content = []
+        for chunk in stream_response:
+            if chunk.choices and chunk.choices[0].delta.content:
+                text_chunk = chunk.choices[0].delta.content
+                full_content.append(text_chunk)
+                yield text_chunk
+
+        final_text = "".join(full_content) or "No pude generar una respuesta."
+        self.messages.append({"role": "assistant", "content": final_text})
+        self.repository.save_message(self.session_id, "assistant", final_text)

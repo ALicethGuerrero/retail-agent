@@ -37,6 +37,11 @@ class FakeMessage:
         return {key: value for key, value in result.items() if value is not None}
 
 
+class FakeChunk:
+    def __init__(self, content):
+        self.choices = [SimpleNamespace(delta=SimpleNamespace(content=content))]
+
+
 class FakeOpenAIClient:
     def __init__(self, messages):
         self.calls = []
@@ -45,7 +50,11 @@ class FakeOpenAIClient:
 
     def create(self, **kwargs):
         self.calls.append(kwargs)
-        return SimpleNamespace(choices=[SimpleNamespace(message=next(self._messages))])
+        msg = next(self._messages)
+        if kwargs.get("stream"):
+            text = msg.content or ""
+            return [FakeChunk(chunk + " ") for chunk in text.split() if chunk]
+        return SimpleNamespace(choices=[SimpleNamespace(message=msg)])
 
 
 def test_scenario_sales_forces_catalog_and_recommends(monkeypatch):
@@ -170,3 +179,16 @@ def test_scenario_warranty_validates_and_creates_ticket(monkeypatch):
     ]
     assert "TK-8001" in response
     assert len(client.calls) == 3
+
+
+def test_chat_stream_yields_chunks(monkeypatch):
+    client = FakeOpenAIClient(
+        [FakeMessage("Hola soy Nexo en que te puedo ayudar")]
+    )
+    monkeypatch.setattr("app.agent.orchestrator.get_client", lambda: client)
+
+    agent = RetailAgent(session_id="scenario-stream")
+    chunks = list(agent.chat_stream("Hola"))
+
+    assert len(chunks) > 1
+    assert "Nexo" in "".join(chunks)
