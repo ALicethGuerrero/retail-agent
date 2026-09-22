@@ -55,6 +55,8 @@ flowchart TD
 	T --> R{Repositorio activo}
 	R -->|USE_MOCK_DATA=true| M[Datos mock en memoria]
 	R -->|DATABASE_URL| DB[(PostgreSQL de Supabase)]
+	A --> S[Persistir sesión y mensajes]
+	S --> DB
 	DB --> W[Validación determinista de garantía]
 	W --> T
 	T --> A
@@ -73,9 +75,11 @@ Permitir al modelo decidir cuándo usar una tool, pero mantener fuera del modelo
 - `app/agent/prompts/system_prompt.md`: identidad, idioma y reglas conversacionales.
 - `ui.py`: interfaz de chat e inspección de memoria.
 
-Aplicar automáticamente las migraciones SQL y los datos iniciales mediante `uv run db-init`. Calcular las garantías con la fecha de compra y `warranty_months` del producto. Mantener la cobertura fuera de las decisiones del modelo.
+Aplicar automáticamente las migraciones SQL y los datos iniciales mediante `uv run db-init`. Incluir las migraciones `001_initial_schema.sql`, `002_seed_data.sql` y `003_conversations_and_evidence.sql`. Calcular las garantías con la fecha de compra y `warranty_months` del producto. Mantener la cobertura fuera de las decisiones del modelo.
 
 Mantener `db-init` idempotente para las migraciones y semillas incluidas. Ejecutarlo antes de levantar la aplicación cuando se use PostgreSQL.
+
+Guardar las conversaciones en `chat_sessions` y `chat_messages`. Mantener el contenido fuera del prompt del modelo.
 
 ## Pruebas
 

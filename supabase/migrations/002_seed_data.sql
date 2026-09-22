@@ -11,9 +11,13 @@ values
 on conflict (sku) do nothing;
 
 insert into orders (order_id, customer_identification, status, estimated_delivery, address)
-values ('PED-1001', '10101010', 'En camino a centro de distribución', '2026-09-25', 'Calle 10 # 40-20, Medellín')
+values
+    ('PED-1001', '10101010', 'En camino a centro de distribución', '2026-09-25', 'Calle 10 # 40-20, Medellín'),
+    ('PED-1002', '10101010', 'Entregado', '2026-02-01', 'Calle 10 # 40-20, Medellín')
 on conflict (order_id) do nothing;
 
 insert into order_items (order_id, product_sku, purchase_date)
-values ('PED-1001', 'LAP-DG-01', '2026-01-15')
+values
+    ('PED-1001', 'LAP-DG-01', '2026-01-15'),
+    ('PED-1002', 'TV-OLED-55', '2026-01-15')
 on conflict (order_id, product_sku) do nothing;

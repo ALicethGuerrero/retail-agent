@@ -1,4 +1,5 @@
 import streamlit as st
+import json
 
 from app.agent import RetailAgent
 
@@ -29,6 +30,7 @@ with st.sidebar:
             st.write(f"- {product}")
     else:
         st.write("Ninguno")
+
     if st.button("Reiniciar conversación"):
         st.session_state.agent = RetailAgent()
         st.session_state.chat_history = []

@@ -1,5 +1,7 @@
 import json
 from typing import Any
+from datetime import date, datetime
+from decimal import Decimal
 
 from pydantic import ValidationError
 
@@ -7,9 +9,17 @@ from app.db.repositories import get_repository
 from app.schemas import ValidarClienteNuevoInput
 
 
+def _default_serializer(obj):
+    if isinstance(obj, Decimal):
+        return float(obj)
+    if isinstance(obj, (date, datetime)):
+        return obj.isoformat()
+    return str(obj)
+
+
 def _response(payload: dict[str, Any]) -> str:
     """Serializar una respuesta JSON para devolverla al modelo."""
-    return json.dumps(payload, ensure_ascii=False)
+    return json.dumps(payload, ensure_ascii=False, default=_default_serializer)
 
 
 def validar_y_registrar_cliente_nuevo(
@@ -140,9 +150,29 @@ def actualizar_direccion_entrega(pedido_id: str, nueva_direccion: str) -> str:
     )
 
 
+def _normalizar_sku(producto_sku: str) -> str:
+    """Normalizar cadenas informales al SKU correspondiente."""
+    if not producto_sku:
+        return producto_sku
+    clean = producto_sku.strip()
+    if clean in {"TV-OLED-55", "LAP-DG-01", "LAP-OFF-02", "CEL-PRO-MAX"}:
+        return clean
+    lower = clean.lower()
+    if "tv" in lower or "televisor" in lower or "oled" in lower:
+        return "TV-OLED-55"
+    if "pro art" in lower or ("laptop" in lower and "diseño" in lower):
+        return "LAP-DG-01"
+    if "slim" in lower or "business" in lower or "oficina" in lower:
+        return "LAP-OFF-02"
+    if "celular" in lower or "smartphone" in lower or "cam" in lower:
+        return "CEL-PRO-MAX"
+    return clean
+
+
 def validar_cobertura_garantia(identificacion_cliente: str, producto_sku: str) -> str:
     """Calcular la cobertura usando compra y vigencia almacenadas."""
-    coverage = get_repository().get_coverage(identificacion_cliente, producto_sku)
+    sku = _normalizar_sku(producto_sku)
+    coverage = get_repository().get_coverage(identificacion_cliente.strip(), sku)
     if not coverage:
         return _response(
             {
@@ -157,8 +187,10 @@ def validar_cobertura_garantia(identificacion_cliente: str, producto_sku: str) -
 def consultar_garantia(identificacion_cliente: str, producto_sku: str) -> str:
     """Consultar cobertura y tickets de un cliente y producto."""
     repository = get_repository()
-    coverage = repository.get_coverage(identificacion_cliente, producto_sku)
-    tickets = repository.list_warranty_tickets(identificacion_cliente, producto_sku)
+    sku = _normalizar_sku(producto_sku)
+    ident = identificacion_cliente.strip()
+    coverage = repository.get_coverage(ident, sku)
+    tickets = repository.list_warranty_tickets(ident, sku)
     if not coverage and not tickets:
         return _response(
             {
@@ -174,7 +206,9 @@ def registrar_solicitud_garantia(
 ) -> str:
     """Registrar un ticket solo cuando la cobertura esté vigente."""
     repository = get_repository()
-    coverage = repository.get_coverage(identificacion_cliente, producto_sku)
+    sku = _normalizar_sku(producto_sku)
+    ident = identificacion_cliente.strip()
+    coverage = repository.get_coverage(ident, sku)
     if not coverage:
         return _response(
             {
@@ -193,8 +227,8 @@ def registrar_solicitud_garantia(
         )
     ticket = repository.create_warranty_ticket(
         {
-            "customer_identification": identificacion_cliente,
-            "product_sku": producto_sku,
+            "customer_identification": ident,
+            "product_sku": sku,
             "reported_failure": falla_reportada,
         }
     )
@@ -281,11 +315,17 @@ TOOLS_SCHEMA = [
         "type": "function",
         "function": {
             "name": "consultar_pedido",
-            "description": "Consulta estado y fecha estimada de pedidos.",
+            "description": "Consulta el estado, fecha estimada, dirección e ítems de un pedido usando 'pedido_id' (ej. PED-1001) O 'identificacion_cliente' (ej. 10101010). Se debe invocar inmediatamente si se tiene cualquiera de los dos datos.",
             "parameters": _parameter_schema(
                 {
-                    "pedido_id": {"type": "string"},
-                    "identificacion_cliente": {"type": "string"},
+                    "pedido_id": {
+                        "type": "string",
+                        "description": "Número o código del pedido (opcional si se provee identificacion_cliente).",
+                    },
+                    "identificacion_cliente": {
+                        "type": "string",
+                        "description": "Número de cédula o identificación del cliente (opcional si se provee pedido_id).",
+                    },
                 }
             ),
         },

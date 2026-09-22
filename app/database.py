@@ -49,7 +49,16 @@ DB_PEDIDOS = {
         "fecha_estimada": "2026-09-25",
         "direccion": "Calle 10 # 40-20, Medellín",
         "items": ["LAP-DG-01"],
-    }
+    },
+    "PED-1002": {
+        "identificacion_cliente": "10101010",
+        "estado": "Entregado",
+        "fecha_estimada": "2026-02-01",
+        "direccion": "Calle 10 # 40-20, Medellín",
+        "items": ["TV-OLED-55"],
+    },
 }
 
 DB_GARANTIAS = {}
+DB_CHAT_SESSIONS = {}
+DB_CHAT_MESSAGES = []

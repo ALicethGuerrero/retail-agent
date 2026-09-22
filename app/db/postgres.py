@@ -1,4 +1,5 @@
 import os
+from functools import lru_cache
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -14,6 +15,7 @@ def use_mock_data() -> bool:
     return os.getenv("USE_MOCK_DATA", "false").lower() == "true"
 
 
+@lru_cache(maxsize=1)
 def get_engine() -> Engine:
     """Crear un engine PostgreSQL a partir de DATABASE_URL."""
     database_url = os.getenv("DATABASE_URL")

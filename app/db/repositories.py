@@ -1,10 +1,18 @@
 import os
+import uuid
 from datetime import date
 from typing import Any, Protocol
 
 from sqlalchemy import text
 
-from app.database import DB_CLIENTES, DB_GARANTIAS, DB_PEDIDOS, DB_PRODUCTOS
+from app.database import (
+    DB_CHAT_MESSAGES,
+    DB_CHAT_SESSIONS,
+    DB_CLIENTES,
+    DB_GARANTIAS,
+    DB_PEDIDOS,
+    DB_PRODUCTOS,
+)
 from app.db.postgres import get_engine, use_mock_data
 
 
@@ -20,6 +28,9 @@ class RetailRepository(Protocol):
     def get_coverage(self, identification: str, sku: str) -> dict[str, Any] | None: ...
     def list_warranty_tickets(self, identification: str, sku: str) -> list[dict[str, Any]]: ...
     def create_warranty_ticket(self, data: dict[str, Any]) -> dict[str, Any]: ...
+    def create_session(self, session_id: str) -> None: ...
+    def save_message(self, session_id: str, role: str, content: str) -> None: ...
+    def link_session_customer(self, session_id: str, identification: str) -> None: ...
 
 
 class MockRetailRepository:
@@ -116,6 +127,17 @@ class MockRetailRepository:
             "estado": "Registrado - En Evaluación Técnica",
         }
         return {"ticket_id": ticket_id, **DB_GARANTIAS[ticket_id]}
+
+    def create_session(self, session_id: str) -> None:
+        DB_CHAT_SESSIONS.setdefault(session_id, {"session_id": session_id})
+
+    def save_message(self, session_id: str, role: str, content: str) -> None:
+        self.create_session(session_id)
+        DB_CHAT_MESSAGES.append({"session_id": session_id, "role": role, "content": content})
+
+    def link_session_customer(self, session_id: str, identification: str) -> None:
+        self.create_session(session_id)
+        DB_CHAT_SESSIONS[session_id]["customer_identification"] = identification
 
     @staticmethod
     def _product(product: dict[str, Any]) -> dict[str, Any]:
@@ -265,6 +287,28 @@ class PostgresRetailRepository:
         with self.engine.begin() as connection:
             row = connection.execute(query, data).mappings().one()
         return dict(row)
+
+    def create_session(self, session_id: str) -> None:
+        query = text("insert into chat_sessions (session_id) values (:session_id) on conflict do nothing")
+        with self.engine.begin() as connection:
+            connection.execute(query, {"session_id": session_id})
+
+    def save_message(self, session_id: str, role: str, content: str) -> None:
+        query = text("""
+            insert into chat_messages (session_id, role, content)
+            values (:session_id, :role, :content)
+        """)
+        with self.engine.begin() as connection:
+            connection.execute(query, {"session_id": session_id, "role": role, "content": content})
+
+    def link_session_customer(self, session_id: str, identification: str) -> None:
+        query = text("""
+            update chat_sessions
+            set customer_identification = :identification, updated_at = now()
+            where session_id = :session_id
+        """)
+        with self.engine.begin() as connection:
+            connection.execute(query, {"session_id": session_id, "identification": identification})
 
 
 def get_repository() -> RetailRepository:
