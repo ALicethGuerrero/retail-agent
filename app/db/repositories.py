@@ -1,3 +1,5 @@
+"""Implementación de repositorios de datos (Mock en memoria y PostgreSQL)."""
+
 import os
 import uuid
 from datetime import date

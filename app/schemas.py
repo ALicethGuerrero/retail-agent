@@ -1,3 +1,5 @@
+"""Esquemas de validación Pydantic para datos de cliente y estado de sesión."""
+
 import re
 from typing import Optional
 
@@ -19,6 +21,7 @@ class ValidarClienteNuevoInput(BaseModel):
     @field_validator("identificacion")
     @classmethod
     def validar_identificacion(cls, value: str) -> str:
+        """Validar que la identificación tenga entre 4 y 11 dígitos numéricos."""
         value = value.strip()
         if not re.fullmatch(r"\d{4,11}", value):
             raise ValueError("La identificación debe contener entre 4 y 11 dígitos.")
@@ -27,6 +30,7 @@ class ValidarClienteNuevoInput(BaseModel):
     @field_validator("nombre_completo")
     @classmethod
     def validar_nombre(cls, value: str) -> str:
+        """Validar que el nombre contenga entre 1 y 100 caracteres y solo letras/espacios."""
         value = value.strip()
         if not 1 <= len(value) <= 100:
             raise ValueError("El nombre debe tener entre 1 y 100 caracteres.")
@@ -37,6 +41,7 @@ class ValidarClienteNuevoInput(BaseModel):
     @field_validator("telefono")
     @classmethod
     def validar_telefono(cls, value: str) -> str:
+        """Validar que el teléfono tenga 10 dígitos e inicie por 3 o 6."""
         value = value.strip()
         if not re.fullmatch(r"[36]\d{9}", value):
             raise ValueError("El teléfono debe tener 10 dígitos e iniciar en 3 o 6.")

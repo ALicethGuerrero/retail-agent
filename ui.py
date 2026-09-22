@@ -1,5 +1,6 @@
+"""Interfaz de usuario con Streamlit para el asistente de Retail Electrónica."""
+
 import streamlit as st
-import json
 
 from app.agent import RetailAgent
 

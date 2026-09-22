@@ -1,3 +1,5 @@
+"""Cliente OpenAI configurado para interactuar con OpenRouter."""
+
 import os
 
 from dotenv import load_dotenv
@@ -23,6 +25,7 @@ client = (
 
 
 def get_client() -> OpenAI:
+    """Obtener el cliente OpenAI inicializado o lanzar excepción si falta la API Key."""
     if client is None:
         raise RuntimeError(
             "Configura OPENROUTER_API_KEY en un archivo .env antes de usar el chat."

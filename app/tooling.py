@@ -1,7 +1,9 @@
+"""Herramientas (tools) ejecutables por el agente e interfaz de esquemas JSON."""
+
 import json
-from typing import Any
 from datetime import date, datetime
 from decimal import Decimal
+from typing import Any
 
 from pydantic import ValidationError
 
@@ -9,7 +11,8 @@ from app.db.repositories import get_repository
 from app.schemas import ValidarClienteNuevoInput
 
 
-def _default_serializer(obj):
+def _default_serializer(obj: Any) -> Any:
+    """Convertir tipos de datos no soportados por JSON (Decimal, date, datetime) a tipos serializables."""
     if isinstance(obj, Decimal):
         return float(obj)
     if isinstance(obj, (date, datetime)):

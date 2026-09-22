@@ -1,3 +1,5 @@
+"""Conexión y migración de base de datos PostgreSQL utilizando SQLAlchemy."""
+
 import os
 from functools import lru_cache
 from pathlib import Path

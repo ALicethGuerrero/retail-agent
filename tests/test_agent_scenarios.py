@@ -1,3 +1,5 @@
+"""Pruebas unitarias de integración de escenarios del agente con mocks de API OpenAI."""
+
 import json
 from types import SimpleNamespace
 

@@ -1,7 +1,9 @@
+"""Pruebas unitarias directas para herramientas, serialización y memoria."""
+
 import json
 
-from app.database import DB_CHAT_MESSAGES, DB_CHAT_SESSIONS, DB_GARANTIAS
 from app.agent import RetailAgent
+from app.database import DB_CHAT_MESSAGES, DB_CHAT_SESSIONS, DB_GARANTIAS
 from app.db.repositories import get_repository
 from app.tooling import (
     comparar_productos,

@@ -1,7 +1,9 @@
+"""Orquestador principal del agente inteligente de atención al cliente."""
+
 import json
 import re
-from uuid import uuid4
 from pathlib import Path
+from uuid import uuid4
 
 from app.client import DEFAULT_MODEL, get_client
 from app.schemas import SessionState

@@ -1,3 +1,5 @@
+"""Estructuras de datos simular base de datos en memoria (Mock Data)."""
+
 DB_CLIENTES = {
     "10101010": {
         "nombre": "Liceth Guerrero",

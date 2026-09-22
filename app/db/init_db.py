@@ -1,8 +1,12 @@
-from app.db.postgres import init_db
+"""Script de CLI para aplicar migraciones e inicializar la base de datos SQL."""
+
 from sqlalchemy.exc import OperationalError
+
+from app.db.postgres import init_db
 
 
 def main() -> int:
+    """Ejecutar las migraciones SQL en orden e informar el resultado."""
     try:
         init_db()
     except OperationalError as error:

@@ -1,3 +1,5 @@
+"""Punto de entrada principal para la aplicación de atención retail."""
+
 import subprocess
 import sys
 
@@ -5,6 +7,7 @@ from app.db.postgres import init_db, use_mock_data
 
 
 def main() -> int:
+    """Inicializar la base de datos si es necesario y ejecutar Streamlit."""
     if not use_mock_data():
         init_db()
     raise SystemExit(
